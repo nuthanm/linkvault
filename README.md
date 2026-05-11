@@ -5,15 +5,15 @@ A personal link-saving site. Paste a URL, it fetches the thumbnail, title, and d
 - **Stack:** Next.js 14 (App Router, Edge runtime), Tailwind, TypeScript
 - **Database:** Neon (serverless Postgres, free tier)
 - **Hosting:** Vercel (free tier)
-- **Auth:** single shared password (only you can add/edit/delete; viewing is public)
+- **Auth:** mobile number + PIN per user (multi-user; each person sees only their own links)
 
 ---
 
 ## Screenshots
 
-| Landing | Sign in |
+| Sign up | Sign in |
 |---|---|
-| ![Landing screen with sign-in button](public/screenshots/landing.png) | ![Password input screen](public/screenshots/sign-in.png) |
+| ![Split-panel signup screen](public/screenshots/signup.png) | ![Split-panel sign-in screen](public/screenshots/sign-in.png) |
 
 **Dashboard — after signing in**
 ![Main dashboard showing saved links grid](public/screenshots/home.png)
@@ -22,6 +22,7 @@ A personal link-saving site. Paste a URL, it fetches the thumbnail, title, and d
 ![Individual link card with thumbnail and action buttons](public/screenshots/link-card.png)
 
 > Screenshots generated with `node scripts/screenshot.mjs` (requires the dev server to be running).
+> To also capture the dashboard: `MOBILE=<number> PIN=<pin> node scripts/screenshot.mjs`
 
 ## What you need
 
@@ -84,10 +85,10 @@ That's it — your site is live. Share the URL with anyone; only you can sign in
 
 ## How it works
 
-- The page is server-rendered with `force-dynamic`, so saved links appear immediately after adding.
-- `POST /api/links` accepts a URL, then on the server fetches the page HTML and parses `<meta property="og:*">` tags (title, description, image, site_name).
-- YouTube is special-cased so thumbnails always work, even if the page can't be scraped.
-- The admin password lives in `process.env.ADMIN_PASSWORD`. The browser stores it in `sessionStorage` after you sign in once, and sends it as the `x-admin-password` header on write requests. All read endpoints are public.
+- `POST /api/links` accepts a URL, fetches the page HTML on the server, and parses `<meta property="og:*">` tags (title, description, image, site_name).
+- YouTube is special-cased so thumbnails always work even if the page can't be scraped.
+- Auth uses mobile number + PIN. After signing in, the session token is stored in `sessionStorage` and sent as the `x-session-token` header on every request. Each user's links are scoped by `user_id` in the database.
+- Any number of users can register with different mobile numbers. Each person sees only their own saved links.
 
 ## Files
 
@@ -115,7 +116,6 @@ scripts/
 
 - **Add more video hosts** to the auto-detection: edit the `VIDEO_HOSTS` array in `lib/metadata.ts`.
 - **Change the look:** colours are in `tailwind.config.js`.
-- **Make it multi-user later:** swap `ADMIN_PASSWORD` for proper auth (Clerk, Auth.js with a `links.user_id` column). The schema already supports a clean migration.
 
 ## Troubleshooting
 

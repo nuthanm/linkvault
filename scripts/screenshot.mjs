@@ -4,7 +4,7 @@
  * Requires the dev (or prod) server to already be running on http://localhost:3000
  */
 import { chromium } from 'playwright';
-import { readFileSync, mkdirSync } from 'fs';
+import { mkdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -13,14 +13,6 @@ const ROOT = resolve(__dirname, '..');
 const OUT = resolve(ROOT, 'public/screenshots');
 mkdirSync(OUT, { recursive: true });
 
-// Read admin password from .env.local
-const envContent = readFileSync(resolve(ROOT, '.env.local'), 'utf-8');
-const adminPassword = envContent.match(/^ADMIN_PASSWORD=(.+)$/m)?.[1]?.trim();
-if (!adminPassword) {
-  console.error('ADMIN_PASSWORD not found in .env.local');
-  process.exit(1);
-}
-
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
 console.log(`Connecting to ${BASE_URL}…`);
 
@@ -28,35 +20,45 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 const page = await ctx.newPage();
 
-// ── 1. Landing overlay ────────────────────────────────────────────────────────
-console.log('  → landing.png');
+// ── 1. Signup page (split-panel, default view) ────────────────────────────────
+console.log('  → signup.png');
 await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30_000 });
-await page.waitForTimeout(900); // let mount animation finish
-await page.screenshot({ path: `${OUT}/landing.png` });
+await page.waitForTimeout(600);
+await page.screenshot({ path: `${OUT}/signup.png` });
 
-// ── 2. Password input ─────────────────────────────────────────────────────────
+// ── 2. Sign-in form (click the "Sign in" toggle link) ─────────────────────────
 console.log('  → sign-in.png');
 await page.click('button:has-text("Sign in")');
-await page.waitForTimeout(450);
+await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/sign-in.png` });
 
-// ── 3. Unlock → main dashboard ────────────────────────────────────────────────
-console.log('  Entering password…');
-await page.fill('input[type="password"]', adminPassword);
-await page.click('button:has-text("Unlock")');
-// Wait for the overlay to fade and the main content to appear
-await page.waitForSelector('text=Paste a link to save it', { timeout: 15_000 });
-await page.waitForTimeout(700);
-console.log('  → home.png');
-await page.screenshot({ path: `${OUT}/home.png` });
+// ── 3. Home / dashboard (use existing screenshot if already signed in) ─────────
+// To capture the dashboard, set MOBILE and PIN env vars before running:
+//   MOBILE=9999999999 PIN=1234 node scripts/screenshot.mjs
+const mobile = process.env.MOBILE;
+const pin = process.env.PIN;
 
-// ── 4. Individual link card (if any cards are present) ────────────────────────
-const firstCard = page.locator('div:has(a:text("Open ↗"))').first();
-if (await firstCard.isVisible({ timeout: 2_000 }).catch(() => false)) {
-  console.log('  → link-card.png');
-  await firstCard.screenshot({ path: `${OUT}/link-card.png` });
+if (mobile && pin) {
+  console.log('  Signing in…');
+  await page.fill('input[type="tel"]', mobile);
+  await page.fill('input[type="password"]', pin);
+  await page.click('button:has-text("Sign in")');
+  await page.waitForSelector('input[placeholder*="youtube"]', { timeout: 15_000 });
+  await page.waitForTimeout(700);
+  console.log('  → home.png');
+  await page.screenshot({ path: `${OUT}/home.png` });
+
+  // ── 4. Individual link card (if any cards are present) ──────────────────────
+  const firstCard = page.locator('[data-card]').first();
+  if (await firstCard.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    console.log('  → link-card.png');
+    await firstCard.screenshot({ path: `${OUT}/link-card.png` });
+  } else {
+    console.log('  (no link cards found — skipping link-card.png)');
+  }
 } else {
-  console.log('  (no link cards found — skipping link-card.png)');
+  console.log('  (MOBILE/PIN not set — skipping home.png and link-card.png)');
+  console.log('  Re-run with: MOBILE=<number> PIN=<pin> node scripts/screenshot.mjs');
 }
 
 await browser.close();
