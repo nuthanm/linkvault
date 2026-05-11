@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, LinkRow } from '@/lib/db';
 import { fetchMetadata } from '@/lib/metadata';
-import { isAdmin } from '@/lib/auth';
+import { getSessionUser } from '@/lib/auth';
 
 export const runtime = 'edge';
 
-// GET /api/links — public list (anyone with the page URL can view)
-export async function GET() {
+// GET /api/links — private, requires a valid session
+export async function GET(req: NextRequest) {
+  const user = await getSessionUser(req);
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
   const rows = (await sql`
     SELECT id, url, title, description, thumbnail_url, site_name, kind, note, tags, created_at
     FROM links
@@ -15,11 +18,10 @@ export async function GET() {
   return NextResponse.json({ links: rows });
 }
 
-// POST /api/links — add a new link (admin only)
+// POST /api/links — add a new link (session required)
 export async function POST(req: NextRequest) {
-  if (!isAdmin(req)) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
+  const user = await getSessionUser(req);
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
   let body: { url?: string; note?: string; tags?: string[] };
   try {
@@ -42,7 +44,6 @@ export async function POST(req: NextRequest) {
     ? body.tags.map((t) => String(t).trim().toLowerCase()).filter(Boolean).slice(0, 10)
     : [];
 
-  // Fetch og:* metadata on the server so the user never waits on CORS
   const meta = await fetchMetadata(url);
 
   const [inserted] = (await sql`

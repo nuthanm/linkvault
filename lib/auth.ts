@@ -1,18 +1,57 @@
-// Single-user "auth" — checks one shared secret password.
-// The password is sent from the browser as a custom header, set after the user
-// enters it once and stored in sessionStorage on the client.
-
 import { NextRequest } from 'next/server';
+import { sql } from './db';
 
-export function isAdmin(req: NextRequest): boolean {
-  const expected = process.env.ADMIN_PASSWORD;
-  if (!expected) return false;
-  const got = req.headers.get('x-admin-password') ?? '';
-  // constant-time-ish comparison
-  if (got.length !== expected.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < expected.length; i++) {
-    mismatch |= expected.charCodeAt(i) ^ got.charCodeAt(i);
+export type SessionUser = {
+  id: string;
+  name: string;
+  mobile_number: string;
+};
+
+export async function getSessionUser(req: NextRequest): Promise<SessionUser | null> {
+  const token = req.headers.get('x-session-token');
+  if (!token) return null;
+  try {
+    const rows = await sql`
+      SELECT u.id, u.name, u.mobile_number
+      FROM sessions s
+      JOIN users u ON u.id = s.user_id
+      WHERE s.token = ${token} AND s.expires_at > NOW()
+      LIMIT 1
+    `;
+    return (rows[0] as SessionUser) ?? null;
+  } catch {
+    return null;
   }
-  return mismatch === 0;
+}
+
+export async function hashPin(mobile: string, pin: string): Promise<string> {
+  const data = new TextEncoder().encode(`linkvault:${mobile}:${pin}`);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export function createToken(): string {
+  return crypto.randomUUID();
+}
+
+export async function ensureTables(): Promise<void> {
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name TEXT NOT NULL DEFAULT '',
+      mobile_number TEXT NOT NULL UNIQUE,
+      pin_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days')
+    )
+  `;
 }
