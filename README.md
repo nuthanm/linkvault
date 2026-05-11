@@ -7,6 +7,22 @@ A personal link-saving site. Paste a URL, it fetches the thumbnail, title, and d
 - **Hosting:** Vercel (free tier)
 - **Auth:** single shared password (only you can add/edit/delete; viewing is public)
 
+---
+
+## Screenshots
+
+| Landing | Sign in |
+|---|---|
+| ![Landing screen with sign-in button](public/screenshots/landing.png) | ![Password input screen](public/screenshots/sign-in.png) |
+
+**Dashboard — after signing in**
+![Main dashboard showing saved links grid](public/screenshots/home.png)
+
+**Link card — open, copy, share, edit, delete**
+![Individual link card with thumbnail and action buttons](public/screenshots/link-card.png)
+
+> Screenshots generated with `node scripts/screenshot.mjs` (requires the dev server to be running).
+
 ## What you need
 
 - Node 18+ and npm
