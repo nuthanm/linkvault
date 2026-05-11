@@ -26,15 +26,15 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx) {
     : undefined;
 
   if (note !== undefined) {
-    await sql`UPDATE links SET note = ${note} WHERE id = ${id}`;
+    await sql`UPDATE links SET note = ${note} WHERE id = ${id} AND user_id = ${user.id}`;
   }
   if (tags !== undefined) {
-    await sql`UPDATE links SET tags = ${tags} WHERE id = ${id}`;
+    await sql`UPDATE links SET tags = ${tags} WHERE id = ${id} AND user_id = ${user.id}`;
   }
 
   const [row] = (await sql`
     SELECT id, url, title, description, thumbnail_url, site_name, kind, note, tags, created_at
-    FROM links WHERE id = ${id}
+    FROM links WHERE id = ${id} AND user_id = ${user.id}
   `) as LinkRow[];
 
   if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
@@ -47,6 +47,6 @@ export async function DELETE(req: NextRequest, ctx: RouteCtx) {
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
   const { id } = await ctx.params;
-  await sql`DELETE FROM links WHERE id = ${id}`;
+  await sql`DELETE FROM links WHERE id = ${id} AND user_id = ${user.id}`;
   return NextResponse.json({ ok: true });
 }

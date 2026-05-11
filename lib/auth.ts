@@ -54,4 +54,27 @@ export async function ensureTables(): Promise<void> {
       expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days')
     )
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS links (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      url TEXT NOT NULL,
+      title TEXT,
+      description TEXT,
+      thumbnail_url TEXT,
+      site_name TEXT,
+      kind TEXT NOT NULL DEFAULT 'article',
+      note TEXT,
+      tags TEXT[] NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  // Migration: add user_id column to existing links tables created before this change
+  await sql`ALTER TABLE links ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE`;
+  // Migration: assign orphaned links (no owner) to the first registered user
+  await sql`
+    UPDATE links
+    SET user_id = (SELECT id FROM users ORDER BY created_at LIMIT 1)
+    WHERE user_id IS NULL AND EXISTS (SELECT 1 FROM users)
+  `;
 }

@@ -4,15 +4,8 @@ import { ensureTables, hashPin, createToken } from '@/lib/auth';
 
 export const runtime = 'edge';
 
-// POST /api/auth/register — create the first (and only) user account.
-// Returns 403 if an account already exists.
 export async function POST(req: NextRequest) {
   await ensureTables();
-
-  const existing = await sql`SELECT 1 FROM users LIMIT 1`;
-  if (existing.length > 0) {
-    return NextResponse.json({ error: 'An account already exists' }, { status: 403 });
-  }
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -22,6 +15,11 @@ export async function POST(req: NextRequest) {
   if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
   if (!/^\d{7,15}$/.test(mobile)) return NextResponse.json({ error: 'Enter a valid mobile number' }, { status: 400 });
   if (!/^\d{4,6}$/.test(pin)) return NextResponse.json({ error: 'PIN must be 4–6 digits' }, { status: 400 });
+
+  const existing = await sql`SELECT 1 FROM users WHERE mobile_number = ${mobile} LIMIT 1`;
+  if (existing.length > 0) {
+    return NextResponse.json({ error: 'This mobile number is already registered. Please sign in.' }, { status: 409 });
+  }
 
   const pinHash = await hashPin(mobile, pin);
   const token = createToken();

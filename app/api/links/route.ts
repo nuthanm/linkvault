@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const rows = (await sql`
     SELECT id, url, title, description, thumbnail_url, site_name, kind, note, tags, created_at
     FROM links
+    WHERE user_id = ${user.id}
     ORDER BY created_at DESC
   `) as LinkRow[];
   return NextResponse.json({ links: rows });
@@ -47,8 +48,8 @@ export async function POST(req: NextRequest) {
   const meta = await fetchMetadata(url);
 
   const [inserted] = (await sql`
-    INSERT INTO links (url, title, description, thumbnail_url, site_name, kind, note, tags)
-    VALUES (${url}, ${meta.title}, ${meta.description}, ${meta.thumbnail_url},
+    INSERT INTO links (user_id, url, title, description, thumbnail_url, site_name, kind, note, tags)
+    VALUES (${user.id}, ${url}, ${meta.title}, ${meta.description}, ${meta.thumbnail_url},
             ${meta.site_name}, ${meta.kind}, ${note}, ${tags})
     RETURNING id, url, title, description, thumbnail_url, site_name, kind, note, tags, created_at
   `) as LinkRow[];
