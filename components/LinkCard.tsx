@@ -4,16 +4,17 @@ import { useState } from 'react';
 import type { LinkRow } from '@/lib/db';
 
 export default function LinkCard({
-  link, isAdmin, onCopy, onShare, onDelete, onSave,
+  link, isAdmin, deleting, onCopy, onDelete, onSave,
 }: {
   link: LinkRow;
   isAdmin: boolean;
+  deleting?: boolean;
   onCopy: () => void;
-  onShare: () => void;
   onDelete: () => void;
   onSave: (note: string, tags: string[]) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [note, setNote] = useState(link.note ?? '');
   const [tags, setTags] = useState<string[]>(link.tags ?? []);
   const [tagInput, setTagInput] = useState('');
@@ -24,6 +25,7 @@ export default function LinkCard({
     `https://api.microlink.io?url=${encodeURIComponent(link.url)}&screenshot=true&embed=screenshot.url`;
   const host = (() => { try { return new URL(link.url).hostname.replace(/^www\./, ''); } catch { return link.url; } })();
   const isVideo = link.kind === 'video';
+  const initial = host.charAt(0).toUpperCase();
 
   async function save() {
     await onSave(note.trim(), tags);
@@ -37,13 +39,32 @@ export default function LinkCard({
   }
 
   return (
-    <div className="group rounded-2xl border border-stone-200 bg-white overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-1 shadow-[0_1px_4px_rgba(0,0,0,0.06),0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.09),0_12px_40px_rgba(0,0,0,0.07)] hover:border-stone-300">
+    <div className={`group relative rounded-2xl border bg-white overflow-hidden flex flex-col transition-all duration-200 shadow-[0_1px_4px_rgba(0,0,0,0.06),0_2px_12px_rgba(0,0,0,0.04)] ${
+      deleting
+        ? 'border-red-200 scale-[0.98] opacity-60 pointer-events-none'
+        : 'border-stone-200 hover:-translate-y-1 hover:shadow-[0_6px_24px_rgba(0,0,0,0.09),0_14px_40px_rgba(0,0,0,0.07)] hover:border-stone-300'
+    }`}>
+
+      {/* Delete progress overlay */}
+      {deleting && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/80 backdrop-blur-[2px]">
+          <svg className="w-5 h-5 animate-spin text-red-400" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          <span className="text-xs font-medium text-red-400">Deleting…</span>
+        </div>
+      )}
+
+      {/* Top accent bar */}
+      <div className={`h-[3px] w-full ${isVideo ? 'bg-gradient-to-r from-red-400 to-rose-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`} />
+
       {/* Thumbnail */}
       <a
         href={link.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block relative bg-stone-100 overflow-hidden"
+        className="block relative bg-stone-50 overflow-hidden"
         style={{ aspectRatio: '16 / 9' }}
       >
         {!imgFailed ? (
@@ -56,20 +77,21 @@ export default function LinkCard({
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-stone-100 to-stone-50">
-            <svg className="w-10 h-10 text-stone-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-stone-50 to-stone-100">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-sm ${isVideo ? 'bg-gradient-to-br from-red-400 to-rose-500' : 'bg-gradient-to-br from-blue-500 to-indigo-500'}`}>
+              {initial}
+            </div>
+            <span className="text-[11px] text-stone-400 font-medium">{host}</span>
           </div>
         )}
 
-        {/* Gradient overlay */}
+        {/* Hover overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
         {/* Kind badge */}
-        <span className={`absolute top-2.5 left-2.5 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full tracking-wide ${
+        <span className={`absolute top-2.5 left-2.5 flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full tracking-wide shadow-sm ${
           isVideo
-            ? 'bg-red-500 text-white shadow-sm'
+            ? 'bg-red-500 text-white'
             : 'bg-white/90 text-stone-600 border border-stone-200/60 backdrop-blur-sm'
         }`}>
           {isVideo ? (
@@ -101,7 +123,7 @@ export default function LinkCard({
             className="w-4 h-4 rounded"
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
-          <span className="text-[11px] font-medium text-stone-400 truncate tracking-wide uppercase">{link.site_name ?? host}</span>
+          <span className="text-[10px] font-semibold text-stone-400 truncate uppercase tracking-widest">{link.site_name ?? host}</span>
         </div>
 
         {/* Title */}
@@ -114,7 +136,7 @@ export default function LinkCard({
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Your note…"
+              placeholder="Add a note…"
               rows={3}
               className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-y mb-2.5 transition-all placeholder:text-stone-400"
             />
@@ -143,7 +165,7 @@ export default function LinkCard({
             {link.tags && link.tags.length > 0 && (
               <div className="flex gap-1 flex-wrap mb-2.5">
                 {link.tags.map((t) => (
-                  <span key={t} className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100/70">{t}</span>
+                  <span key={t} className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-500 border border-stone-200/70">{t}</span>
                 ))}
               </div>
             )}
@@ -164,6 +186,23 @@ export default function LinkCard({
                 Cancel
               </button>
             </>
+          ) : confirmDelete ? (
+            /* Inline delete confirmation — no native browser dialog */
+            <div className="flex items-center gap-1.5 w-full animate-fade-in">
+              <span className="text-xs text-stone-400 mr-auto">Delete this link?</span>
+              <button
+                onClick={() => { setConfirmDelete(false); onDelete(); }}
+                className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-red-500 text-white hover:bg-red-600 active:scale-[0.97] transition-all"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="px-3 py-1.5 text-xs rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-50 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
           ) : (
             <>
               <a
@@ -190,7 +229,7 @@ export default function LinkCard({
                 </IconBtn>
               )}
               {isAdmin && (
-                <IconBtn label="Delete" onClick={onDelete} danger>
+                <IconBtn label="Delete" onClick={() => setConfirmDelete(true)} danger>
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>

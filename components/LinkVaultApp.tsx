@@ -10,6 +10,8 @@ import AccountMenu from './AccountMenu';
 type Filter = 'all' | 'video' | 'article';
 type User = { id: string; name: string; mobile_number: string };
 
+const AUTH_KEY = 'linkvault.auth';
+
 function SearchIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -34,11 +36,13 @@ export default function LinkVaultApp() {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Restore session from sessionStorage on mount
+  // Restore session from localStorage on mount (persists across browser restarts)
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem('linkvault.auth');
+      const raw = localStorage.getItem(AUTH_KEY);
       if (raw) {
         const { token, user: u } = JSON.parse(raw) as { token: string; user: User };
         setSessionToken(token);
@@ -46,8 +50,11 @@ export default function LinkVaultApp() {
         fetchLinks(token);
       }
     } catch {
-      sessionStorage.removeItem('linkvault.auth');
+      localStorage.removeItem(AUTH_KEY);
+    } finally {
+      setInitializing(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchLinks(token: string) {
@@ -106,14 +113,18 @@ export default function LinkVaultApp() {
 
   async function handleDelete(id: string) {
     if (!sessionToken) return;
-    if (!confirm('Delete this link?')) return;
-    const res = await fetch(`/api/links/${id}`, {
-      method: 'DELETE',
-      headers: { 'x-session-token': sessionToken },
-    });
-    if (!res.ok) { showToast('Could not delete', true); return; }
-    setLinks((cur) => cur.filter((l) => l.id !== id));
-    showToast('Deleted');
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/links/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-session-token': sessionToken },
+      });
+      if (!res.ok) { showToast('Could not delete', true); return; }
+      setLinks((cur) => cur.filter((l) => l.id !== id));
+      showToast('Deleted');
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   async function handleSaveEdit(id: string, note: string, tags: string[]) {
@@ -130,7 +141,7 @@ export default function LinkVaultApp() {
   }
 
   function handleLogin(token: string, loggedInUser: User) {
-    sessionStorage.setItem('linkvault.auth', JSON.stringify({ token, user: loggedInUser }));
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ token, user: loggedInUser }));
     setSessionToken(token);
     setUser(loggedInUser);
     fetchLinks(token);
@@ -140,7 +151,7 @@ export default function LinkVaultApp() {
     if (sessionToken) {
       fetch('/api/auth/logout', { method: 'POST', headers: { 'x-session-token': sessionToken } }).catch(() => null);
     }
-    sessionStorage.removeItem('linkvault.auth');
+    localStorage.removeItem(AUTH_KEY);
     setSessionToken(null);
     setUser(null);
     setLinks([]);
@@ -151,22 +162,37 @@ export default function LinkVaultApp() {
     const updated = { ...user, name: newName };
     setUser(updated);
     if (sessionToken) {
-      sessionStorage.setItem('linkvault.auth', JSON.stringify({ token: sessionToken, user: updated }));
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ token: sessionToken, user: updated }));
     }
   }
 
+  // Don't show landing overlay until we've confirmed no stored session exists.
+  // This prevents a flash of the login screen on every refresh.
   const isLocked = !sessionToken;
+  const showOverlay = !initializing && isLocked;
+
+  // While reading localStorage, render a minimal full-screen loader to avoid flicker.
+  if (initializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fafaf9]">
+        <svg className="w-6 h-6 animate-spin text-stone-300" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <>
-      {isLocked && <LandingOverlay onLogin={handleLogin} />}
+      {showOverlay && <LandingOverlay onLogin={handleLogin} />}
 
       {/* Sticky header */}
       <header
         className="sticky top-0 z-30 bg-white/80 border-b border-border"
         style={{
           backdropFilter: 'blur(12px)',
-          filter: isLocked ? 'blur(2px)' : 'none',
+          filter: showOverlay ? 'blur(2px)' : 'none',
           transition: 'filter 0.5s ease',
         }}
       >
@@ -192,9 +218,9 @@ export default function LinkVaultApp() {
       <main
         className="max-w-5xl mx-auto px-4 py-8"
         style={{
-          filter: isLocked ? 'blur(3px) grayscale(0.7) brightness(0.92)' : 'none',
-          pointerEvents: isLocked ? 'none' : 'auto',
-          userSelect: isLocked ? 'none' : 'auto',
+          filter: showOverlay ? 'blur(3px) grayscale(0.7) brightness(0.92)' : 'none',
+          pointerEvents: showOverlay ? 'none' : 'auto',
+          userSelect: showOverlay ? 'none' : 'auto',
           transition: 'filter 0.5s ease',
         }}
       >
@@ -243,15 +269,8 @@ export default function LinkVaultApp() {
                 key={l.id}
                 link={l}
                 isAdmin={!!sessionToken}
+                deleting={deletingId === l.id}
                 onCopy={() => { navigator.clipboard.writeText(l.url); showToast('Copied to clipboard'); }}
-                onShare={async () => {
-                  if (navigator.share) {
-                    try { await navigator.share({ title: l.title ?? l.url, url: l.url }); } catch { /* ignore */ }
-                  } else {
-                    navigator.clipboard.writeText(l.url);
-                    showToast('Link copied');
-                  }
-                }}
                 onDelete={() => handleDelete(l.id)}
                 onSave={(note, tags) => handleSaveEdit(l.id, note, tags)}
               />
