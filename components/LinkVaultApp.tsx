@@ -237,7 +237,7 @@ export default function LinkVaultApp() {
         ) : visible.length === 0 ? (
           <EmptyState hasLinks={links.length > 0} isSignedIn={!!sessionToken} />
         ) : (
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))' }}>
+          <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
             {visible.map((l) => (
               <LinkCard
                 key={l.id}
