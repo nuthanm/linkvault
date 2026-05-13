@@ -4,6 +4,16 @@
 
 **In one sentence:** A private, self-hosted bookmark manager that automatically enriches links with metadata and lets you organize them with notes and tags.
 
+## Fork Policy
+
+This repository is intentionally open for anyone to fork and use for personal or commercial projects.
+
+- You are free to clone, fork, modify, and deploy your own version.
+- Please make your product-specific changes in your own fork.
+- This upstream repository is maintained as the base project.
+
+See the [LICENSE](LICENSE) file for full terms.
+
 | Sign up                                                     | Sign in                                                       |
 | ----------------------------------------------------------- | ------------------------------------------------------------- |
 | ![Split-panel signup screen](public/screenshots/signup.png) | ![Split-panel sign-in screen](public/screenshots/sign-in.png) |
@@ -324,3 +334,9 @@ node scripts/screenshot.mjs
 
 - Timeout after clicking Sign in: verify `MOBILE`, `PIN`, and `BASE_URL`.
 - `link-card.png` skipped: add at least one saved link to the account, then rerun.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
