@@ -1,34 +1,143 @@
 # LinkVault
 
-A self-hosted link-saving app. Paste any URL and it automatically fetches the title, description, and thumbnail. Add a note and tags, then browse, search, copy, share, edit, or delete your saved links.
+**LinkVault** is a self-hosted link management app that lets you save, organize, and search URLs with automatic metadata extraction. When you paste a link, it instantly fetches the title, description, and thumbnail image. You can add personal notes and tags for better organization, then easily browse, search, filter, and manage your collection. The app uses mobile number + PIN authentication to keep each user's links completely private and secure.
 
-- **Stack:** Next.js 15 (App Router, Edge runtime), Tailwind CSS, TypeScript
-- **Database:** Neon (serverless Postgres)
-- **Auth:** mobile number + PIN — each user sees only their own links
+**In one sentence:** A private, self-hosted bookmark manager that automatically enriches links with metadata and lets you organize them with notes and tags.
+
+| Sign up                                                     | Sign in                                                       |
+| ----------------------------------------------------------- | ------------------------------------------------------------- |
+| ![Split-panel signup screen](public/screenshots/signup.png) | ![Split-panel sign-in screen](public/screenshots/sign-in.png) |
+
+## Features in Detail
+
+### Saving Links
+
+1. Paste any URL into the input field at the top
+2. Optionally add a personal note to remember why you saved it
+3. Add tags for easy organization and filtering
+4. Click **Save** — the app automatically fetches metadata (title, description, thumbnail)
+
+### Browsing Your Collection
+
+- View all links as rich cards displaying title, description, thumbnail, and source
+- Each card shows the website name and content type badge (video or article)
+- Video content is automatically detected for popular platforms
+
+### Search & Filter
+
+- Use the **search bar** to find links by title, description, URL, tags, or notes
+- **Filter by type**: View only videos, only articles, or all links
+- Tags are fully searchable and clickable
+
+### Link Actions
+
+- **Copy**: Click the copy icon to copy the URL to clipboard
+- **Edit**: Update the note or tags on any saved link
+- **Delete**: Remove links (with a confirmation to prevent accidents)
+
+### Account Management
+
+- **Change your name**: Update your display name anytime
+- **Change your PIN**: Secure your account with a new PIN
+- **Sign out**: End your session safely
+
+### Privacy & Security
+
+- Only you can see your links — each user's data is completely isolated
+- Authentication via mobile number + PIN ensures only you can access your vault
+- No ads, no tracking, no data selling — your links stay private
+
+### Metadata Extraction
+
+- **Open Graph tags**: Title, description, images from the webpage
+- **Video detection**: Special handling for YouTube, Vimeo, Twitch, TikTok, and more
+- **Fallback images**: Microlink API provides fallback screenshots if OG images aren't available
+- **YouTube thumbnails**: Direct fetching ensures YouTube videos always show correct thumbnails
+
+## Use Cases
+
+- **Research**: Save interesting articles and blog posts with personal notes
+- **Bookmarking**: Organize all your bookmarks in one searchable vault
+- **Learning**: Tag tutorials, courses, and educational resources
+- **Content Curation**: Save videos, news articles, and social media content
+- **Knowledge Management**: Build a personal knowledge base of useful links
+
+## Video Content Support
+
+The app automatically detects and categorizes content from:
+
+- YouTube (youtube.com, youtu.be)
+- Vimeo
+- TikTok
+- Twitch
+- Dailymotion
+- Loom
+- And more...
+
+Video content gets special treatment for reliable thumbnail fetching.
+
+## Technology Stack Explained
+
+- **Next.js 15 (App Router)**: Modern React framework with edge runtime support
+- **TypeScript**: Type-safe development for fewer bugs
+- **Tailwind CSS**: Beautiful, responsive UI with utility-first CSS
+- **Neon Postgres**: Serverless database that scales with your needs
+- **Edge Runtime**: Fast response times, globally distributed
+
+## Database Schema
+
+LinkVault stores three main tables:
+
+- **users**: User accounts (mobile number, name, PIN hash)
+- **sessions**: Active user sessions with expiration (30 days default)
+- **links**: Saved links with metadata, notes, tags, and timestamps
+
+Each link is tied to a specific user via `user_id`, ensuring complete privacy.
 
 ---
 
-## Screenshots
-
-| Sign up | Sign in |
-|---|---|
-| ![Split-panel signup screen](public/screenshots/signup.png) | ![Split-panel sign-in screen](public/screenshots/sign-in.png) |
+## Other Screenshots
 
 **Dashboard**
 ![Main dashboard showing saved links grid](public/screenshots/home.png)
-
-**Link card**
-![Individual link card with thumbnail and action buttons](public/screenshots/link-card.png)
 
 ---
 
 ## Requirements
 
 - Node.js 18+
-- A free [Neon](https://neon.tech) account (serverless Postgres)
-- A [Vercel](https://vercel.com) account (or any Node.js host)
+- A PostgreSQL database (we use [Neon](https://neon.tech) - serverless Postgres)
+- A Node.js hosting platform (we use [Vercel](https://vercel.com))
 
----
+## Platform Flexibility Note
+
+✅ **Yes, you can deploy this on your preferred platform!**
+
+We've used Neon for the database and Vercel for hosting, but **LinkVault** is designed to be platform-agnostic. You can choose any PostgreSQL provider and any Node.js hosting service.
+
+## Alternative Deployment Options
+
+#### **Database Alternatives:**
+
+- **PostgreSQL:** [Railway](https://railway.app), [Render](https://render.com), [Supabase](https://supabase.com), [AWS RDS](https://aws.amazon.com/rds/), [DigitalOcean](https://www.digitalocean.com/products/managed-databases/), self-hosted
+- **MySQL:** [PlanetScale](https://planetscale.com), [AWS RDS](https://aws.amazon.com/rds/), [DigitalOcean](https://www.digitalocean.com/)
+- **SQLite:** Self-hosted or embedded (for small-scale deployments)
+
+#### **Hosting Alternatives:**
+
+- **Node.js Runtime:** [Railway](https://railway.app), [Render](https://render.com), [Fly.io](https://fly.io), [AWS Lambda](https://aws.amazon.com/lambda/), [DigitalOcean App Platform](https://www.digitalocean.com/products/app-platform/), [Heroku](https://www.heroku.com/), self-hosted VPS
+- **Containerized:** [Docker](https://www.docker.com/) on any cloud provider
+
+## Required Changes for Alternative Deployment
+
+#### **For a Different Database (PostgreSQL variants):**
+
+1. **Update `lib/db.ts`:**
+   - Replace `@neondatabase/serverless` with standard `pg` package
+   ```bash
+   npm uninstall @neondatabase/serverless
+   npm install pg
+   ```
 
 ## Local setup
 
@@ -49,6 +158,8 @@ npm install
 
 ```bash
 cp .env.example .env.local
+
+copy .env.example .env.local
 ```
 
 Open `.env.local` and set `DATABASE_URL` to the connection string you copied.
@@ -131,24 +242,85 @@ scripts/
 
 ## Troubleshooting
 
-| Symptom | Fix |
-|---|---|
-| "DATABASE_URL is not set" on startup | Add `DATABASE_URL` to `.env.local` (local) or Vercel environment variables (prod) |
-| Vercel build fails after adding env var | Env var changes require a fresh deploy — trigger one from the Vercel dashboard |
-| Thumbnail missing | The site doesn't expose an `og:image`. The card still works; it shows a placeholder |
-| "Incorrect mobile or PIN" | Double-check the number and PIN. PIN is case-sensitive to digit order only |
-| Sign up says "mobile already registered" | That number has an account — click **Sign in** instead |
+| Symptom                                  | Fix                                                                                 |
+| ---------------------------------------- | ----------------------------------------------------------------------------------- |
+| "DATABASE_URL is not set" on startup     | Add `DATABASE_URL` to `.env.local` (local) or Vercel environment variables (prod)   |
+| Vercel build fails after adding env var  | Env var changes require a fresh deploy — trigger one from the Vercel dashboard      |
+| Thumbnail missing                        | The site doesn't expose an `og:image`. The card still works; it shows a placeholder |
+| "Incorrect mobile or PIN"                | Double-check the number and PIN. PIN is case-sensitive to digit order only          |
+| Sign up says "mobile already registered" | That number has an account — click **Sign in** instead                              |
 
 ---
 
 ## Refresh screenshots
 
-```bash
-# Auth screens only (no credentials needed)
-node scripts/screenshot.mjs
+The script `scripts/screenshot.mjs` captures screenshots into `public/screenshots`.
 
-# Include dashboard and link cards
-MOBILE=<your-number> PIN=<your-pin> node scripts/screenshot.mjs
+### What it captures
+
+1. `signup.png` (landing signup view)
+2. `sign-in.png` (sign-in panel)
+3. `home.png` (dashboard after login, only when credentials are provided)
+4. `link-card.png` (first visible link card, only when at least one link exists)
+
+### Prerequisites
+
+1. Install dependencies:
+
+```bash
+npm install
 ```
 
-Requires the dev server to be running (`npm run dev`).
+2. Ensure Chromium is available for Playwright (run once if needed):
+
+```bash
+npx playwright install chromium
+```
+
+3. Start the app before running the screenshot script:
+
+```bash
+npm run dev
+```
+
+### Environment variables
+
+You can provide values either in `.env.local` or directly in terminal.
+
+- `BASE_URL` (optional): defaults to `http://localhost:3000`
+- `MOBILE` (optional): mobile number for sign-in
+- `PIN` (optional): PIN for sign-in
+
+### Run commands
+
+Auth screens only (no credentials required):
+
+```bash
+node scripts/screenshot.mjs
+```
+
+Include dashboard and card screenshots (macOS/Linux):
+
+```bash
+BASE_URL=http://localhost:3000 MOBILE=<your-number> PIN=<your-pin> node scripts/screenshot.mjs
+```
+
+Include dashboard and card screenshots (Windows PowerShell):
+
+```powershell
+$env:BASE_URL="http://localhost:3000"
+$env:MOBILE="<your-number>"
+$env:PIN="<your-pin>"
+node scripts/screenshot.mjs
+```
+
+### Notes
+
+- If `MOBILE` or `PIN` is missing, the script generates only `signup.png` and `sign-in.png`.
+- If login succeeds but the account has no saved links, `home.png` is generated and `link-card.png` is skipped.
+- If using a deployed URL (for example Vercel), credentials must belong to that deployment's database.
+
+### Troubleshooting
+
+- Timeout after clicking Sign in: verify `MOBILE`, `PIN`, and `BASE_URL`.
+- `link-card.png` skipped: add at least one saved link to the account, then rerun.
