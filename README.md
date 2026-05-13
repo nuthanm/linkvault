@@ -47,9 +47,16 @@ See the [LICENSE](LICENSE) file for full terms.
 
 ### Account Management
 
-- **Change your name**: Update your display name anytime
-- **Change your PIN**: Secure your account with a new PIN
-- **Sign out**: End your session safely
+Click your initials avatar in the top-right corner to open the dedicated **Account Settings** page (`/account`). Everything is managed in one clean place:
+
+| What               | How                                                                                                                                                                                                      |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Edit name**      | Tap **Edit** next to your name, type the new value, and hit **Save**                                                                                                                                     |
+| **Change PIN**     | Tap **Change** next to the PIN field, enter your current PIN, then set a new 4–6 digit PIN                                                                                                               |
+| **Sign out**       | Red outlined **Sign Out** button — clears your session immediately                                                                                                                                       |
+| **Delete account** | Red **Delete Account** button — opens a confirmation dialog warning that all your saved links will be permanently removed. Confirm to wipe your links, sessions, and account from the database entirely. |
+
+> The delete confirmation dialog clearly states: _"All your saved links may not be retained once you confirm — they will be gone for good along with your account."_ No browser `alert()` — it's a proper in-page dialog so you can read it carefully before acting.
 
 ### Privacy & Security
 
@@ -110,6 +117,9 @@ Each link is tied to a specific user via `user_id`, ensuring complete privacy.
 
 **Dashboard**
 ![Main dashboard showing saved links grid](public/screenshots/home.png)
+
+**Account Settings**
+![Account settings page with Sign Out and Delete Account buttons](public/screenshots/account.png)
 
 ---
 

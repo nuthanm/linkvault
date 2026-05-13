@@ -64,6 +64,18 @@ if (mobile && pin) {
   } else {
     console.log("  (no link cards found — skipping link-card.png)");
   }
+
+  // ── 5. Account settings page ─────────────────────────────────────────────────
+  console.log("  → account.png");
+  await page.goto(`${BASE_URL}/account`, {
+    waitUntil: "networkidle",
+    timeout: 15_000,
+  });
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${OUT}/account.png` });
+
+  // Navigate back home so subsequent steps start from the right page
+  await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 15_000 });
 } else {
   console.log("  (MOBILE/PIN not set — skipping home.png and link-card.png)");
   console.log(
