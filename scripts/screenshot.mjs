@@ -51,7 +51,7 @@ if (mobile && pin) {
   await page.waitForSelector('input[type="url"][placeholder*="Paste a URL"]', {
     timeout: 15_000,
   });
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(3000);
   console.log("  → home.png");
   await page.screenshot({ path: `${OUT}/home.png` });
 
