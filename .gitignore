@@ -7,3 +7,17 @@ out
 .vercel
 *.log
 .DS_Store
+Thumbs.db
+*.tsbuildinfo
+
+# Optional local test and coverage artifacts
+coverage
+.nyc_output
+*.lcov
+playwright-report
+test-results
+blob-report
+
+# Optional local linter caches
+.eslintcache
+.stylelintcache
